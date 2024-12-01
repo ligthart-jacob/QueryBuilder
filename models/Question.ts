@@ -18,7 +18,7 @@ export default class Question extends Model implements IQuestion {
   public updated: Date;
   public user: User;
 
-  public constructor(data?: RowDataPacket) {
+  public constructor(data: RowDataPacket) {
     super("questions");
     if (data) {
       this.id = data[this._table].id;
@@ -32,32 +32,48 @@ export default class Question extends Model implements IQuestion {
       this.updated = data[this._table].updated;
       this.user = new User(data);
     }
+    else {
+      throw new Error("Question does not exist");
+    }
   }
 
-  public async get(): Promise<Question> {
-    return await new QueryBuilder<IQuestion>(this._table).join("users").get().then(rows => {
+  public static async getByUUID(uuid: string): Promise<Question> {
+    return await new QueryBuilder<IQuestion>("questions").join("users").where("questions.uuid", "=", uuid).get().then(rows => {
       return new Question(rows[0]);
     });
   }
 
-  public async getAll(): Promise<Question[]> {
-    return await new QueryBuilder<IQuestion>(this._table).join("users").sort("title", "ASC").get(1, 1).then(rows => {
+  public static async getAll(): Promise<Question[]> {
+    return await new QueryBuilder<IQuestion>("questions").join("users").sort("title", "ASC").get().then(rows => {
       return rows.map(row => new Question(row));
     });
   }
 
-  public async insert(...fields: [keyof IQuestion & string, Field][]): Promise<void> {
-    if (fields.length) {
-      await new QueryBuilder<IQuestion>(this._table).insert(...fields);
-    }
-    else {
-      await new QueryBuilder<IQuestion>(this._table).insert(
-        ["uuid", this.uuid],
-        ["users_id", this.users_id],
-        ["title", this.title],
-        ["description", this.description],
-        ["slug", this.slug]
-      ); 
-    }
+  public static async getChunk(amount: number, offset: number = 0) {
+    return await new QueryBuilder<IQuestion>("questions").join("users").sort("title", "ASC").get(amount, offset).then(rows => {
+      return rows.map(row => new Question(row));
+    });
+  }
+
+  public static async insert(users_id, title, description, slug): Promise<void> {
+    await new QueryBuilder<IQuestion>("questions").insert(
+      ["uuid", crypto.randomUUID()],
+      ["users_id", users_id],
+      ["title", title],
+      ["description", description],
+      ["slug", slug]
+    );
+  }
+
+  public async update(): Promise<void> {
+    await new QueryBuilder<IQuestion>("questions").update(
+      this.id,
+      ["title", this.title],
+      ["description", this.description],
+    )
+  }
+
+  public async remove(): Promise<void> {
+    await new QueryBuilder<IQuestion>("questions").remove("id", "=", this.id);
   }
 }

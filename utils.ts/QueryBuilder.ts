@@ -63,13 +63,7 @@ export default class QueryBuilder<T> {
     return results;
   }
 
-  /* 
-    Wil ik nog aanpassen, ik heb liever dat je alleen een object T meegeeft die het automatische voor je update 
-    Ik zit er dus aan te denken om de constructor verplicht te maken, hierdoor garandeer ik dat alle data in het object staat
-    Vervolgens kunnen de get en insert functies static worden gemaakt zodat deze alsnog gebruikt kunnen worden.
-    (zelfde geld voor de remove)
-  */
-  public async update(id: number, ...fields: [keyof T & string, Field[]]): Promise<void> {
+  public async update(id: number, ...fields: [keyof T & string, Field][]): Promise<void> {
     const sql = `UPDATE ${this._tables[0]} SET ${fields.map(field => `${field[0]} = ?`)} WHERE ${this._tables}.id = ?`;
     await QueryBuilder._pool.query(sql, [...fields.map(field => field[1]), id]);
   }
